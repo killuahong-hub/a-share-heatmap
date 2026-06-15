@@ -8,11 +8,13 @@ import os
 import sys
 import urllib.request
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(REPO_ROOT, "docs")
-API_URL = "https://sckd.dapanyuntu.com/api/api/industry_ma20_analysis_page?page=0"
+API_BASE = "https://sckd.dapanyuntu.com/api/api/industry_ma20_analysis_page"
+PAGES = 3
+BJ_TZ = timezone(timedelta(hours=8))
 
 INDUSTRY_CATEGORY_MAP = {
     "专业服务": "商业服务",
@@ -57,15 +59,36 @@ INDUSTRY_CATEGORY_MAP = {
 
 
 def fetch_data():
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] 正在获取数据...")
-    req = urllib.request.Request(API_URL, headers={
-        "Referer": "https://sckd.dapanyuntu.com/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    })
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        raw = json.loads(resp.read().decode("utf-8"))
-    print(f"  获取成功: {len(raw.get('industries',[]))} 个行业, {len(raw.get('dates',[]))} 个交易日")
-    return raw
+    print(f"[{datetime.now(BJ_TZ).strftime('%H:%M:%S')}] 正在获取数据（{PAGES}页）...")
+    all_dates = []
+    all_data = []
+    industries = None
+    date_offset = 0
+
+    for page in range(PAGES):
+        url = f"{API_BASE}?page={page}"
+        req = urllib.request.Request(url, headers={
+            "Referer": "https://sckd.dapanyuntu.com/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        })
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+
+        if not raw.get("dates"):
+            break
+
+        if industries is None:
+            industries = raw["industries"]
+
+        page_dates = raw["dates"]
+        for date_idx, ind_idx, val in raw["data"]:
+            all_data.append([date_idx + date_offset, ind_idx, val])
+
+        all_dates.extend(page_dates)
+        date_offset += len(page_dates)
+        print(f"  Page {page}: {len(page_dates)} 天 ({page_dates[0]} ~ {page_dates[-1]})")
+
+    return {"dates": all_dates, "industries": industries, "data": all_data}
 
 
 def aggregate_data(raw):
@@ -246,7 +269,7 @@ def generate_html(output_data):
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    print(f"=== 市场热力图V2数据更新 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+    print(f"=== 市场热力图V2数据更新 {datetime.now(BJ_TZ).strftime('%Y-%m-%d %H:%M:%S')} ===\n")
 
     try:
         raw = fetch_data()
@@ -259,7 +282,7 @@ def main():
     analytics = compute_analytics(aggregated)
 
     output = {
-        "updateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "updateTime": datetime.now(BJ_TZ).strftime("%Y-%m-%d %H:%M:%S"),
         "dateRange": {
             "start": raw.get("start_date", ""),
             "end": raw.get("end_date", ""),
@@ -278,7 +301,7 @@ def main():
 
     html_path = generate_html(output)
 
-    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] V2更新完成!")
+    print(f"\n[{datetime.now(BJ_TZ).strftime('%H:%M:%S')}] V2更新完成!")
     print(f"  JSON: {json_path}")
     if html_path:
         print(f"  HTML: {html_path}")
