@@ -8,12 +8,12 @@ import os
 import sys
 import urllib.request
 from collections import defaultdict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, date, timezone, timedelta
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(REPO_ROOT, "docs")
-API_BASE = "https://sckd.dapanyuntu.com/api/api/industry_ma20_analysis_page"
-PAGES = 3
+API_URL = "https://sckd.dapanyuntu.com/api/api/industry_ma20_analysis_range"
+CACHE_FILE = os.path.join(REPO_ROOT, "cache.json")
 BJ_TZ = timezone(timedelta(hours=8))
 
 INDUSTRY_CATEGORY_MAP = {
@@ -59,46 +59,97 @@ INDUSTRY_CATEGORY_MAP = {
 
 
 def fetch_data():
-    print(f"[{datetime.now(BJ_TZ).strftime('%H:%M:%S')}] 正在获取数据（{PAGES}页）...")
-    industries = None
-    page_results = []
+    now = datetime.now(BJ_TZ)
+    print(f"[{now.strftime('%H:%M:%S')}] 正在获取数据（range接口 + 本地缓存增量）...")
 
-    for page in range(PAGES):
-        url = f"{API_BASE}?page={page}"
-        req = urllib.request.Request(url, headers={
-            "Referer": "https://sckd.dapanyuntu.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        })
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            raw = json.loads(resp.read().decode("utf-8"))
+    # ── 读取本地缓存 ──
+    cache = None
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+            if cache.get("dates") and cache.get("industries") and cache.get("data"):
+                last_date = cache["dates"][-1]
+                print(f"  缓存命中: {len(cache['dates'])} 个交易日, 最新 {last_date}")
+            else:
+                cache = None
+                print("  缓存格式异常，重新全量获取")
+        except Exception as e:
+            cache = None
+            print(f"  缓存读取失败({e})，重新全量获取")
 
-        if not raw.get("dates"):
-            break
+    # ── 确定增量起始日期 ──
+    today = now.strftime("%Y-%m-%d")
+    if cache:
+        last_date = cache["dates"][-1]
+        ld = date.fromisoformat(last_date)
+        start_date = (ld + timedelta(days=1)).isoformat()
+        if start_date > today:
+            print(f"  缓存已最新({last_date})，跳过请求")
+            return {"dates": cache["dates"], "industries": cache["industries"], "data": cache["data"]}
+    else:
+        start_date = "2025-01-01"  # API会自动截断到最早可用数据(2025-05-06)
 
-        if industries is None:
-            industries = raw["industries"]
+    # ── 请求range接口 ──
+    headers = {
+        "Referer": "https://sckd.dapanyuntu.com/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    url = f"{API_URL}?start_date={start_date}&end_date={today}"
+    print(f"  请求: {start_date} ~ {today}")
 
-        page_results.append(raw)
-        print(f"  Page {page}: {len(raw['dates'])} 天 ({raw['dates'][0]} ~ {raw['dates'][-1]})")
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        raw = json.loads(resp.read().decode("utf-8"))
 
-    # 按日期排序合并（老→新）
-    all_entries = []
-    for raw in page_results:
-        for date_idx, ind_idx, val in raw["data"]:
-            all_entries.append((raw["dates"][date_idx], raw["industries"][ind_idx], val))
+    new_dates = raw.get("dates", [])
+    new_industries = raw.get("industries", [])
+    new_data = raw.get("data", [])
 
-    all_entries.sort(key=lambda x: x[0])
+    if not new_dates:
+        print("  无新数据返回")
+        if cache:
+            return {"dates": cache["dates"], "industries": cache["industries"], "data": cache["data"]}
+        raise RuntimeError("无缓存且无新数据")
 
-    sorted_dates = sorted(set(e[0] for e in all_entries))
-    date_to_idx = {d: i for i, d in enumerate(sorted_dates)}
-    ind_to_idx = {ind: i for i, ind in enumerate(industries)}
+    print(f"  新数据: {len(new_dates)} 天 ({new_dates[0]} ~ {new_dates[-1]}), {len(new_data)} 条")
 
-    merged_data = []
-    for date_str, ind_name, val in all_entries:
-        merged_data.append([date_to_idx[date_str], ind_to_idx[ind_name], val])
+    # ── 合并缓存与新数据 ──
+    if not cache:
+        # 首次全量，直接存储
+        result_dates = list(new_dates)
+        result_industries = list(new_industries)
+        result_data = [list(entry) for entry in new_data]
+    else:
+        # 增量合并
+        n_cached = len(cache["dates"])
+        result_dates = list(cache["dates"]) + list(new_dates)
+        result_industries = list(cache["industries"])
 
-    print(f"  合并完成: {len(industries)} 个行业, {len(sorted_dates)} 个交易日 ({sorted_dates[0]} ~ {sorted_dates[-1]})")
-    return {"dates": sorted_dates, "industries": industries, "data": merged_data}
+        # 新数据的行业索引映射到缓存的行业索引
+        ind_map = {}
+        for new_idx, ind_name in enumerate(new_industries):
+            try:
+                ind_map[new_idx] = cache["industries"].index(ind_name)
+            except ValueError:
+                pass  # 缓存中不存在的新行业，跳过
+
+        # 新数据的日期索引偏移到合并后位置
+        remapped = []
+        for date_idx, ind_idx, val in new_data:
+            if ind_idx in ind_map:
+                remapped.append([date_idx + n_cached, ind_map[ind_idx], val])
+
+        result_data = [list(entry) for entry in cache["data"]] + remapped
+
+    # ── 写入缓存 ──
+    cache_out = {"dates": result_dates, "industries": result_industries, "data": result_data}
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cache_out, f, ensure_ascii=False)
+
+    print(f"  合并完成: {len(result_industries)} 行业, {len(result_dates)} 个交易日 ({result_dates[0]} ~ {result_dates[-1]})")
+    print(f"  缓存已保存: {CACHE_FILE}")
+    return cache_out
 
 
 def aggregate_data(raw):
@@ -294,8 +345,8 @@ def main():
     output = {
         "updateTime": datetime.now(BJ_TZ).strftime("%Y-%m-%d %H:%M:%S"),
         "dateRange": {
-            "start": raw.get("start_date", ""),
-            "end": raw.get("end_date", ""),
+            "start": raw["dates"][0] if raw["dates"] else "",
+            "end": raw["dates"][-1] if raw["dates"] else "",
         },
         "dates": raw["dates"],
         "fullDates": raw["dates"],
