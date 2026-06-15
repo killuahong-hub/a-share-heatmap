@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f8fafe">
 <title>A股行业板块热力图V2 · MA20站上率</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -50,6 +51,28 @@
   .toolbar-btn:hover { background: #eef3f9; }
   .toolbar-btn.active { background: #2471a3; color: #fff; border-color: #2471a3; }
 
+  /* 概念标签 */
+  .concept-bar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 8px 14px; background: #fefefe; border-radius: 8px;
+    border: 1px solid #eef0f2;
+  }
+  .concept-bar .toolbar-label { color: #9b59b6; }
+  .concept-btn {
+    padding: 4px 12px; border-radius: 14px; border: 1px solid #e0d4f0;
+    background: #faf7ff; color: #7d5ba6; font-size: 11px; cursor: pointer;
+    transition: all 0.18s; font-weight: 500;
+  }
+  .concept-btn:hover { background: #f0e8ff; border-color: #c9b3e8; }
+  .concept-btn.active { background: #8e44ad; color: #fff; border-color: #8e44ad; }
+  tr.concept-dimmed td { opacity: 0.2; transition: opacity 0.25s; }
+  tr.concept-dimmed td.label-cell { color: #ccc !important; }
+  tr.concept-dimmed:hover td { opacity: 0.5; }
+  tr.concept-match td.label-cell {
+    border-left: 3px solid #8e44ad; padding-left: 5px;
+    background: linear-gradient(90deg, #f9f2ff 0%, #fff 100%);
+  }
+
   /* 热力图 */
   .heatmap-wrapper { overflow-x: auto; }
   .heatmap-table { border-collapse: separate; border-spacing: 1px; width: 100%; min-width: 860px; }
@@ -61,8 +84,9 @@
   .heatmap-table td.label-cell {
     font-size: 12px; font-weight: 500; color: #4a4a4a; text-align: right;
     padding-right: 8px; white-space: nowrap; position: sticky; left: 0; background: #fff; z-index: 2;
-    cursor: pointer; transition: color 0.15s;
+    cursor: pointer; transition: color 0.15s, box-shadow 0.2s;
   }
+  .heatmap-table td.label-cell.scrolled { box-shadow: 4px 0 8px rgba(0,0,0,0.08); }
   .heatmap-table td.label-cell:hover { color: #2471a3; }
   .heatmap-table td.label-cell.top3 { font-weight: 700; color: #1a5276; }
   .heatmap-table td.label-cell .drill-icon { font-size: 10px; color: #b0bec5; margin-left: 2px; }
@@ -132,6 +156,30 @@
   .signal-type { font-weight: 500; }
   .signal-type.golden { color: #27ae60; }
   .signal-type.death { color: #e74c3c; }
+
+  /* 信号时间线 */
+  .signal-timeline-wrap { overflow-x: auto; margin-bottom: 12px; border: 1px solid #e8edf2; border-radius: 8px; }
+  .signal-timeline { border-collapse: collapse; width: 100%; }
+  .signal-timeline th { position: sticky; top: 0; background: #f8fafe; font-size: 8px; color: #95a5a6; font-weight: 400; padding: 2px 0; border-bottom: 1px solid #e8edf2; white-space: nowrap; min-width: 14px; }
+  .signal-timeline th.tl-label { position: sticky; left: 0; z-index: 2; text-align: right; padding-right: 6px; font-size: 11px; font-weight: 600; color: #1a3c5e; background: #f8fafe; min-width: 72px; border-right: 1px solid #e8edf2; }
+  .signal-timeline td { padding: 0; text-align: center; height: 18px; vertical-align: middle; }
+  .signal-timeline td.tl-label { position: sticky; left: 0; z-index: 1; background: #fff; text-align: right; padding-right: 6px; font-size: 11px; font-weight: 600; color: #1a3c5e; border-right: 1px solid #e8edf2; white-space: nowrap; }
+  .signal-timeline .sig-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  .signal-timeline .sig-dot.golden { background: #27ae60; box-shadow: 0 0 3px #27ae6055; }
+  .signal-timeline .sig-dot.death { background: #e74c3c; box-shadow: 0 0 3px #e74c3c55; }
+  .signal-summary { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; font-size: 12px; color: #555; flex-wrap: wrap; }
+  .signal-summary .ss-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
+  .signal-summary .ss-badge.golden { background: #e8f8f0; color: #27ae60; }
+  .signal-summary .ss-badge.death { background: #fde8e8; color: #e74c3c; }
+  .signal-summary .ss-badge { cursor: pointer; transition: all 0.2s; }
+  .signal-summary .ss-badge:hover { transform: scale(1.05); }
+  .signal-summary .ss-badge.active { outline: 2px solid #1a3c5e; outline-offset: 1px; }
+  .signal-summary .ss-badge.dimmed { opacity: 0.3; }
+  .signal-timeline td.tl-label { cursor: pointer; transition: background 0.15s; }
+  .signal-timeline td.tl-label:hover { background: #eef5fb !important; }
+  .signal-timeline tr.concept-dimmed { opacity: 0.2; }
+  .signal-timeline tr.concept-match td.tl-label { color: #2471a3; font-weight: 700; }
+  .signal-timeline .sig-dot.type-dimmed { opacity: 0.08; }
 
   /* 排名条形图 */
   .rank-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
@@ -210,6 +258,103 @@
     font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
   }
   .refresh-btn:hover { background: #c8e6c9 !important; }
+
+  /* ===== 移动端适配 ===== */
+  @media (max-width: 768px) {
+    body { padding: 10px; }
+    h1 { font-size: 18px; }
+    .subtitle { font-size: 11px; margin-bottom: 10px; }
+    .update-time { font-size: 10px; margin-bottom: 10px; }
+
+    /* 市场温度紧凑 */
+    .market-temp { padding: 8px 12px; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .temp-label { font-size: 12px; }
+    .temp-badge { font-size: 11px; padding: 2px 8px; }
+    .temp-stat { font-size: 11px; }
+    .temp-bar-bg { width: 80px; }
+
+    /* 统计卡片 3列网格 */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .stat-item { padding: 8px 10px; min-width: unset; }
+    .stat-value { font-size: 15px; }
+    .stat-label { font-size: 10px; }
+    .stat-desc { font-size: 10px; }
+
+    /* 工具栏堆叠 */
+    .toolbar { flex-direction: column; align-items: flex-start; gap: 8px; padding: 8px 10px; }
+    .toolbar span[style*="flex:1"] { display: none; }
+    .toolbar-btn { font-size: 11px; padding: 5px 10px; }
+    .refresh-btn { width: 100%; justify-content: center; padding: 8px; font-size: 12px; }
+
+    /* 概念标签紧凑 */
+    .concept-bar { padding: 6px 10px; gap: 6px; }
+    .concept-btn { font-size: 10px; padding: 3px 10px; }
+
+    /* 热力图小格子 */
+    .heatmap-table { min-width: 600px; }
+    .heatmap-table th.date-header { font-size: 7px; height: 32px; }
+    .heatmap-table td.label-cell { font-size: 11px; padding-right: 5px; }
+    .heatmap-cell { width: 16px; height: 18px; font-size: 0; }
+    .heatmap-cell:hover { font-size: 7px; }
+
+    /* 卡片紧凑 */
+    .card { padding: 14px; margin-bottom: 14px; border-radius: 10px; }
+    .card h2 { font-size: 14px; margin-bottom: 10px; }
+    .card h2 .hint { font-size: 10px; }
+
+    /* 排名单列 */
+    .rank-list { grid-template-columns: 1fr; }
+
+    /* 折线图矮一点 */
+    .chart-container { height: 260px; }
+    .chart-controls { gap: 4px; }
+    .chart-btn { font-size: 11px; padding: 4px 8px; }
+    .chart-presets { gap: 4px; }
+    .preset-btn { font-size: 10px; padding: 3px 8px; }
+
+    /* 动量排行单列 */
+    .momentum-board { grid-template-columns: 1fr; }
+
+    /* 轮动信号 */
+    .signal-list { max-height: 240px; }
+    .signal-item { font-size: 11px; padding: 5px 8px; }
+    .signal-summary { font-size: 11px; gap: 8px; }
+    .signal-summary .ss-badge { font-size: 11px; padding: 2px 8px; }
+    .signal-timeline .sig-dot { width: 6px; height: 6px; }
+    .signal-timeline td.tl-label { font-size: 10px; padding-right: 4px; min-width: 60px; }
+    .signal-timeline th { font-size: 7px; min-width: 10px; }
+    .signal-timeline th.tl-label { font-size: 10px; min-width: 60px; }
+
+    /* 下钻面板全屏 */
+    .drill-panel { width: 100vw; max-width: 100vw; }
+    .drill-chart-container { height: 200px; }
+
+    /* 映射表紧凑 */
+    .mapping-table { font-size: 12px; }
+    .mapping-table thead th { padding: 8px; font-size: 11px; }
+    .mapping-table td { padding: 6px 8px; }
+    .sub-tag { font-size: 10px; padding: 1px 6px; margin: 1px 2px; }
+
+    /* 色阶图例 */
+    .legend-item { width: 18px; height: 12px; }
+    .legend span.legend-label { font-size: 10px; }
+
+    .footer { font-size: 10px; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 6px; }
+    h1 { font-size: 16px; letter-spacing: 0; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stat-value { font-size: 14px; }
+    .heatmap-cell { width: 14px; height: 16px; }
+    .heatmap-table { min-width: 480px; }
+    .chart-container { height: 220px; }
+    .toolbar-btn { font-size: 10px; padding: 4px 8px; }
+    .concept-btn { font-size: 9px; padding: 2px 8px; }
+    .market-temp { gap: 6px; padding: 6px 8px; }
+    .temp-bar-bg { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -217,6 +362,7 @@
   <h1>A股行业板块热力图 V2</h1>
   <p class="subtitle">MA20站上率 · 动量分析 · 轮动信号 · 市场均线叠加</p>
   <p class="update-time" id="updateTime"></p>
+  <div class="market-temp" id="marketTemp"></div>
 
   <div class="stats" id="stats"></div>
 
@@ -240,6 +386,11 @@
     <button class="toolbar-btn refresh-btn" id="btnRefresh" title="打开在线版获取最新数据">⟳ 刷新数据</button>
   </div>
 
+  <!-- 概念板块标签 -->
+  <div class="concept-bar" id="conceptBar">
+    <span class="toolbar-label">概念：</span>
+  </div>
+
   <!-- 热力图 -->
   <div class="card">
     <h2>行业热力图 <span class="hint">点击行业名称查看二级行业详情</span></h2>
@@ -256,7 +407,11 @@
   <!-- 轮动信号 -->
   <div class="card" id="signalCard" style="display:none">
     <h2>板块轮动信号 <span class="hint">MA20上穿/下穿50%线</span></h2>
+    <div id="signalTimeline"></div>
+    <div id="signalSummary"></div>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:#95a5a6;padding:4px 0">展开详细列表</summary>
     <div class="signal-list" id="signalList"></div>
+    </details>
   </div>
 
   <!-- 最新排名 -->
@@ -312,6 +467,8 @@ let colorScheme = 'blue';
 let timeRange = 30;
 let showMomentum = false;
 let showSignals = false;
+let activeConcept = null;
+const CONCEPTS = D.conceptTags || {};
 
 // ===== 色阶 =====
 function getColorBlue(val) {
@@ -348,7 +505,12 @@ function getTrend(arr) {
 
 // ===== 统计 =====
 const latestIdx = DATES.length - 1;
-const ranked = CATS.map(cat => ({ cat, latest: DATA[cat][latestIdx], values: DATA[cat], trend: getTrend(DATA[cat]), momentum: ANALYTICS.byCategory[cat]?.momentum5d }));
+const ranked = CATS.map(cat => {
+  const arr = DATA[cat];
+  let latest = arr[latestIdx];
+  if (latest == null) { for (let i = latestIdx - 1; i >= 0; i--) { if (arr[i] != null) { latest = arr[i]; break; } } }
+  return { cat, latest, values: arr, trend: getTrend(arr), momentum: ANALYTICS.byCategory[cat]?.momentum5d };
+});
 const allLatest = ranked.map(r => r.latest);
 const avg = (allLatest.reduce((a,b)=>a+b,0)/allLatest.length).toFixed(1);
 const above50 = allLatest.filter(v=>v>=50).length;
@@ -379,6 +541,8 @@ document.querySelectorAll("[data-range]").forEach(btn => {
     document.querySelectorAll("[data-range]").forEach(b => b.classList.remove("active"));
     this.classList.add("active");
     buildHeatmap();
+    updateChart();
+    if (showSignals) buildSignalList();
   });
 });
 document.getElementById("btnMomentum").addEventListener("click", function() {
@@ -394,6 +558,30 @@ document.getElementById("btnSignals").addEventListener("click", function() {
   document.getElementById("signalCard").style.display = showSignals ? "block" : "none";
   if (showSignals) buildSignalList();
 });
+
+// ===== 概念标签 =====
+(function buildConceptBar() {
+  const bar = document.getElementById("conceptBar");
+  Object.keys(CONCEPTS).forEach(tag => {
+    const btn = document.createElement("button");
+    btn.className = "concept-btn";
+    btn.textContent = tag;
+    btn.dataset.tag = tag;
+    btn.addEventListener("click", function() {
+      if (activeConcept === tag) {
+        activeConcept = null;
+        this.classList.remove("active");
+      } else {
+        activeConcept = tag;
+        document.querySelectorAll(".concept-btn").forEach(b => b.classList.remove("active"));
+        this.classList.add("active");
+      }
+      buildHeatmap();
+      if (showSignals) buildSignalList();
+    });
+    bar.appendChild(btn);
+  });
+})();
 
 // ===== 热力图 =====
 const tooltip = document.getElementById("tooltip");
@@ -411,7 +599,13 @@ function buildHeatmap() {
 
   ranked.forEach(({ cat, latest, values, trend, momentum }, rowIdx) => {
     const visVals = values.slice(startIdx);
-    html += "<tr>";
+    // 概念筛选：判断当前大类是否属于激活的概念
+    let trClass = "";
+    if (activeConcept && CONCEPTS[activeConcept]) {
+      const conceptCats = CONCEPTS[activeConcept].categories || [];
+      trClass = conceptCats.includes(cat) ? ' class="concept-match"' : ' class="concept-dimmed"';
+    }
+    html += `<tr${trClass}>`;
     html += `<td class="label-cell${rowIdx<3?' top3':''}" data-cat="${cat}">${cat}<span class="drill-icon">›</span><span class="trend-arrow">${trend}</span></td>`;
     if (showMomentum) {
       const m = momentum || 0;
@@ -463,8 +657,39 @@ function buildHeatmap() {
       document.querySelectorAll(".heatmap-cell").forEach(c => c.classList.remove("dimmed"));
       tooltip.style.display = "none"; activeCell = null;
     });
+    // 触摸支持
+    cell.addEventListener("touchstart", function(e) {
+      e.preventDefault();
+      const cat = this.dataset.cat, col = +this.dataset.col, val = +this.dataset.val;
+      const ana = ANALYTICS.byCategory[cat];
+      tooltip.querySelector(".tt-cat").textContent = cat;
+      tooltip.querySelector(".tt-date").textContent = D.fullDates[col];
+      tooltip.querySelector(".tt-val").textContent = "MA20站上率：" + val + "%";
+      let extra = `5日动量: ${ana?.momentum5d>0?'+':''}${ana?.momentum5d||'N/A'} | 波动率: ${ana?.volatility||'N/A'}`;
+      const streak = ana?.streak || 0;
+      extra += ` | 连续${Math.abs(streak)}日${streak>0?'站上':'跌破'}50%`;
+      tooltip.querySelector(".tt-extra").textContent = extra;
+      const rect = this.getBoundingClientRect();
+      tooltip.style.left = Math.min(rect.left, window.innerWidth - 270) + "px";
+      tooltip.style.top = (rect.top - 80) + "px";
+      tooltip.style.display = "block";
+      setTimeout(() => { tooltip.style.display = "none"; }, 3000);
+    }, { passive: false });
   });
 }
+
+// 粘性列滚动阴影
+(function() {
+  const wrapper = document.querySelector(".heatmap-wrapper");
+  if (wrapper) {
+    const onScroll = () => {
+      const scrolled = wrapper.scrollLeft > 2;
+      document.querySelectorAll(".label-cell").forEach(c => c.classList.toggle("scrolled", scrolled));
+    };
+    wrapper.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+})();
 
 function buildLegend() {
   const items = colorScheme === 'diverge' ? [
@@ -499,6 +724,8 @@ function buildMomentumBoard() {
 }
 
 // ===== 轮动信号 =====
+let signalTypeFilter = null; // null | 'golden' | 'death'
+
 function buildSignalList() {
   const allSignals = [];
   CATS.forEach(cat => {
@@ -507,6 +734,92 @@ function buildSignalList() {
     });
   });
   allSignals.sort((a,b) => b.dateIdx - a.dateIdx);
+
+  // 时间线可视化（跟随时间范围）
+  const startIdx = Math.max(0, DATES.length - timeRange);
+  const visDates = DATES.slice(startIdx);
+  const visSignals = allSignals.filter(s => s.dateIdx >= startIdx);
+  const goldenCount = visSignals.filter(s => s.type === 'golden').length;
+  const deathCount = visSignals.filter(s => s.type === 'death').length;
+
+  // 汇总（含金叉/死叉筛选按钮）
+  const gActive = signalTypeFilter === 'golden' ? ' active' : '';
+  const dActive = signalTypeFilter === 'death' ? ' active' : '';
+  const gDimmed = signalTypeFilter === 'death' ? ' dimmed' : '';
+  const dDimmed = signalTypeFilter === 'golden' ? ' dimmed' : '';
+  document.getElementById("signalSummary").innerHTML =
+    `<div class="signal-summary">` +
+    `<span class="ss-badge golden${gActive}${gDimmed}" data-sig-filter="golden" title="点击筛选金叉">↑ 金叉 ${goldenCount}</span>` +
+    `<span class="ss-badge death${dActive}${dDimmed}" data-sig-filter="death" title="点击筛选死叉">↓ 死叉 ${deathCount}</span>` +
+    (signalTypeFilter ? `<span style="font-size:11px;color:#2471a3;cursor:pointer;text-decoration:underline" id="clearSigFilter">清除筛选</span>` : '') +
+    `<span style="color:#95a5a6;flex:1;text-align:right">${visDates[0]} ~ ${visDates[visDates.length-1]}</span>` +
+    `<span style="font-size:10px;color:#b0bec5">点击行业名称可下钻</span>` +
+    `</div>`;
+
+  // 构建信号网格：行=分类，列=日期
+  if (visSignals.length > 0 && visDates.length <= 276) {
+    // 信号索引查找表
+    const sigMap = {};
+    visSignals.forEach(s => { sigMap[s.cat + '|' + s.date] = s.type; });
+
+    let html = '<div class="signal-timeline-wrap"><table class="signal-timeline"><thead><tr><th class="tl-label"></th>';
+    visDates.forEach((d, i) => {
+      let label = '';
+      if (visDates.length <= 30) {
+        label = d.slice(5);
+      } else {
+        const prevMonth = i > 0 ? visDates[i-1].slice(0,7) : '';
+        const curMonth = d.slice(0,7);
+        if (curMonth !== prevMonth) label = visDates.length > 120 ? curMonth : d.slice(5);
+      }
+      html += `<th>${label}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    ranked.forEach(r => {
+      const catSignals = visSignals.filter(s => s.cat === r.cat);
+      if (catSignals.length === 0 && visDates.length > 60) return;
+      // 概念标签筛选
+      let rowClass = '';
+      if (activeConcept && CONCEPTS[activeConcept]) {
+        const conceptCats = CONCEPTS[activeConcept].categories || [];
+        rowClass = conceptCats.includes(r.cat) ? ' concept-match' : ' concept-dimmed';
+      }
+      html += `<tr class="${rowClass.trim()}"><td class="tl-label" data-cat="${r.cat}" title="点击下钻 ${r.cat} 二级行业">${r.cat}</td>`;
+      visDates.forEach(d => {
+        const sig = sigMap[r.cat + '|' + d];
+        if (sig) {
+          const dimClass = (signalTypeFilter && sig !== signalTypeFilter) ? ' type-dimmed' : '';
+          html += `<td><span class="sig-dot ${sig}${dimClass}" title="${r.cat} ${d} ${sig==='golden'?'金叉':'死叉'}"></span></td>`;
+        } else {
+          html += '<td></td>';
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    document.getElementById("signalTimeline").innerHTML = html;
+
+    // 绑定事件：下钻
+    document.querySelectorAll('.signal-timeline .tl-label[data-cat]').forEach(el => {
+      el.addEventListener('click', () => openSignalDrill(el.dataset.cat));
+    });
+  } else {
+    document.getElementById("signalTimeline").innerHTML = '<p style="color:#999;font-size:12px;padding:10px">当前时间范围无轮动信号</p>';
+  }
+
+  // 绑定事件：类型筛选
+  document.querySelectorAll('[data-sig-filter]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const type = this.dataset.sigFilter;
+      signalTypeFilter = (signalTypeFilter === type) ? null : type;
+      buildSignalList();
+    });
+  });
+  const clearBtn = document.getElementById('clearSigFilter');
+  if (clearBtn) clearBtn.addEventListener('click', () => { signalTypeFilter = null; buildSignalList(); });
+
+  // 详细列表（折叠）
   document.getElementById("signalList").innerHTML = allSignals.length === 0
     ? '<p style="color:#999;font-size:12px;padding:10px">近期无轮动信号</p>'
     : allSignals.map(s => `<div class="signal-item">
@@ -533,7 +846,7 @@ document.querySelectorAll(".rank-name[data-cat]").forEach(el => {
 
 // ===== 趋势折线图 =====
 const CHART_COLORS = ["#2471a3","#e74c3c","#27ae60","#f39c12","#8e44ad","#16a085","#d35400","#2980b9","#c0392b","#1abc9c","#e67e22","#9b59b6","#2ecc71","#e84393","#00b894","#6c5ce7","#fdcb6e","#0984e3","#d63031","#00cec9","#a29bfe","#ffeaa7","#fab1a0","#55efc4","#74b9ff","#ff7675"];
-let selectedCats = new Set(["电子","煤炭","金融","有色金属","通信"]);
+let selectedCats = new Set(ranked.slice(0,5).map(r=>r.cat));
 let trendChart = null;
 
 const PRESETS = [
@@ -563,21 +876,23 @@ function buildChartControls() {
   });
 }
 function updateChart() {
+  const startIdx = Math.max(0, DATES.length - timeRange);
+  const visLabels = DATES.slice(startIdx);
   const datasets = [];
   selectedCats.forEach(cat => {
     const idx = CATS.indexOf(cat);
     const color = CHART_COLORS[idx%CHART_COLORS.length];
-    datasets.push({ label:cat, data:DATA[cat], borderColor:color, backgroundColor:color+"22", borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:0.3, fill:false });
+    datasets.push({ label:cat, data:DATA[cat].slice(startIdx), borderColor:color, backgroundColor:color+"22", borderWidth:2, pointRadius: visLabels.length > 60 ? 0 : 2, pointHoverRadius:5, tension:0.3, fill:false });
   });
   // 市场均线（虚线）
   datasets.push({
-    label: "市场均线", data: MARKET_AVG,
+    label: "市场均线", data: MARKET_AVG.slice(startIdx),
     borderColor: "#1a3c5e", backgroundColor: "transparent",
     borderWidth: 2, borderDash: [6,4], pointRadius: 0, tension: 0.3, fill: false,
   });
   if(trendChart) trendChart.destroy();
   trendChart = new Chart(document.getElementById("trendChart"), {
-    type:"line", data:{labels:DATES,datasets},
+    type:"line", data:{labels:visLabels,datasets},
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:"index",intersect:false},
@@ -586,7 +901,7 @@ function updateChart() {
         tooltip:{backgroundColor:"rgba(26,60,94,0.95)",titleFont:{size:12},bodyFont:{size:12},padding:10,cornerRadius:8,callbacks:{label:ctx=>ctx.dataset.label+": "+ctx.parsed.y+"%"}}
       },
       scales:{
-        x:{grid:{color:"#f0f0f0"},ticks:{font:{size:10},maxRotation:45}},
+        x:{grid:{color:"#f0f0f0"},ticks:{font:{size:10},maxRotation:45,maxTicksLimit:visLabels.length>120?12:visLabels.length>60?15:20,callback:function(val){const l=this.getLabelForValue(val);if(!l)return'';return visLabels.length>60?l.slice(0,7):l.slice(5)}}},
         y:{min:0,max:100,grid:{color:"#f0f0f0"},ticks:{font:{size:10},callback:v=>v+"%",stepSize:20},title:{display:true,text:"MA20站上率 (%)",font:{size:11}}}
       }
     }
@@ -625,7 +940,8 @@ function openDrill(cat) {
 
     let rankHtml = '<div class="drill-section-title">最新排名（' + DATES[latestIdx] + '）</div><div class="drill-sub-grid">';
     subs.forEach((s, i) => {
-      const val = subData[s][latestIdx];
+      let val = subData[s][latestIdx];
+      if (val == null) { for (let j = latestIdx - 1; j >= 0; j--) { if (subData[s][j] != null) { val = subData[s][j]; break; } } }
       const hot = val >= 30;
       rankHtml += `<div class="drill-sub-item">
         <span class="drill-sub-rank${i<3?' top':''}">${i+1}</span>
@@ -636,27 +952,30 @@ function openDrill(cat) {
     });
     rankHtml += "</div>";
 
-    let chartHtml = '<div class="drill-section-title">趋势对比</div><div class="drill-chart-container"><canvas id="drillChartCanvas"></canvas></div>';
+    let chartHtml = '<div class="drill-section-title">趋势对比 <span style="font-size:11px;color:#95a5a6;font-weight:normal">（随工具栏时间范围同步）</span></div><div class="drill-chart-container"><canvas id="drillChartCanvas"></canvas></div>';
     document.getElementById("drillContent").innerHTML = rankHtml + chartHtml;
 
     setTimeout(() => {
       const ctx = document.getElementById("drillChartCanvas");
       if (!ctx) return;
       if (drillChart) drillChart.destroy();
+      const startIdx = Math.max(0, DATES.length - timeRange);
+      const visLabels = DATES.slice(startIdx);
+      const maxTicks = visLabels.length > 120 ? 12 : visLabels.length > 60 ? 15 : 20;
       const datasets = subs.map((s, i) => ({
-        label: s, data: subData[s],
+        label: s, data: subData[s].slice(startIdx),
         borderColor: CHART_COLORS[i%CHART_COLORS.length],
         backgroundColor: CHART_COLORS[i%CHART_COLORS.length]+"22",
-        borderWidth: 2, pointRadius: 2, pointHoverRadius: 4, tension: 0.3, fill: false
+        borderWidth: 2, pointRadius: visLabels.length > 60 ? 0 : 2, pointHoverRadius: 4, tension: 0.3, fill: false
       }));
       drillChart = new Chart(ctx, {
-        type: "line", data: { labels: DATES, datasets },
+        type: "line", data: { labels: visLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
           plugins: { legend: { position: "bottom", labels: { font: { size: 10 }, usePointStyle: true, padding: 8 } } },
           scales: {
-            x: { grid: { color: "#f0f0f0" }, ticks: { font: { size: 9 }, maxRotation: 45 } },
+            x: { grid: { color: "#f0f0f0" }, ticks: { font: { size: 9 }, maxRotation: 45, maxTicksLimit: maxTicks, callback: function(val) { const label = this.getLabelForValue(val); if(!label)return''; return visLabels.length>60 ? label.slice(0,7) : label.slice(5); } } },
             y: { min: 0, max: 100, grid: { color: "#f0f0f0" }, ticks: { font: { size: 9 }, callback: v=>v+"%", stepSize: 20 } }
           }
         }
@@ -675,6 +994,120 @@ function closeDrill() {
 }
 document.getElementById("drillClose").addEventListener("click", closeDrill);
 document.getElementById("drillOverlay").addEventListener("click", closeDrill);
+
+// ===== 信号下钻：子行业金叉死叉 =====
+function openSignalDrill(cat) {
+  const panel = document.getElementById("drillPanel");
+  const overlay = document.getElementById("drillOverlay");
+  document.getElementById("drillTitle").textContent = cat + " · 二级行业金叉/死叉信号";
+
+  const subInfo = SUBS[cat];
+  if (!subInfo) {
+    document.getElementById("drillContent").innerHTML = "<p style='color:#999'>无二级行业数据</p>";
+  } else {
+    const subs = subInfo.subIndustries;
+    const subData = subInfo.data;
+
+    // 计算每个子行业的50%穿越信号
+    const startIdx = Math.max(0, DATES.length - timeRange);
+    const visDates = DATES.slice(startIdx);
+    const subSignals = {}; // { subName: [{dateIdx, date, type}] }
+    let totalGolden = 0, totalDeath = 0;
+
+    subs.forEach(s => {
+      subSignals[s] = [];
+      const arr = subData[s];
+      for (let i = Math.max(1, startIdx); i < arr.length; i++) {
+        const prev = arr[i-1], cur = arr[i];
+        if (prev == null || cur == null) continue;
+        if (prev < 50 && cur >= 50) {
+          subSignals[s].push({ dateIdx: i, date: DATES[i], type: 'golden' });
+          if (i >= startIdx) totalGolden++;
+        } else if (prev >= 50 && cur < 50) {
+          subSignals[s].push({ dateIdx: i, date: DATES[i], type: 'death' });
+          if (i >= startIdx) totalDeath++;
+        }
+      }
+    });
+
+    // 汇总
+    let html = `<div class="signal-summary" style="margin-bottom:12px">` +
+      `<span class="ss-badge golden">↑ 金叉 ${totalGolden}</span>` +
+      `<span class="ss-badge death">↓ 死叉 ${totalDeath}</span>` +
+      `<span style="color:#95a5a6">${visDates[0]} ~ ${visDates[visDates.length-1]}</span>` +
+      `<span style="font-size:11px;color:#95a5a6">MA20站上率穿越50%线</span>` +
+      `</div>`;
+
+    // 子行业信号时间线
+    const sigMap = {};
+    subs.forEach(s => {
+      subSignals[s].forEach(sig => {
+        if (sig.dateIdx >= startIdx) sigMap[s + '|' + sig.date] = sig.type;
+      });
+    });
+
+    html += '<div class="signal-timeline-wrap"><table class="signal-timeline"><thead><tr><th class="tl-label">二级行业</th>';
+    visDates.forEach((d, i) => {
+      let label = '';
+      if (visDates.length <= 30) {
+        label = d.slice(5);
+      } else {
+        const prevMonth = i > 0 ? visDates[i-1].slice(0,7) : '';
+        const curMonth = d.slice(0,7);
+        if (curMonth !== prevMonth) label = visDates.length > 120 ? curMonth : d.slice(5);
+      }
+      html += `<th>${label}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    subs.forEach(s => {
+      const sigs = subSignals[s].filter(sig => sig.dateIdx >= startIdx);
+      // 最新值
+      const latestIdx = DATES.length - 1;
+      let latestVal = subData[s][latestIdx];
+      if (latestVal == null) { for (let j = latestIdx-1; j >= 0; j--) { if (subData[s][j] != null) { latestVal = subData[s][j]; break; } } }
+      const valStr = latestVal != null ? ` (${latestVal}%)` : '';
+
+      html += `<tr><td class="tl-label" title="${s}${valStr}">${s}</td>`;
+      visDates.forEach(d => {
+        const sig = sigMap[s + '|' + d];
+        html += `<td>${sig ? `<span class="sig-dot ${sig}" title="${s} ${d} ${sig==='golden'?'金叉↑':'死叉↓'}"></span>` : ''}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    // 子行业信号汇总表
+    html += '<div style="margin-top:16px"><div class="drill-section-title">信号统计</div><table style="width:100%;font-size:12px;border-collapse:collapse">';
+    html += '<thead><tr style="border-bottom:2px solid #e8edf2"><th style="text-align:left;padding:6px 8px">二级行业</th><th style="text-align:center;padding:6px">最新值</th><th style="text-align:center;padding:6px;color:#27ae60">金叉次数</th><th style="text-align:center;padding:6px;color:#e74c3c">死叉次数</th><th style="text-align:center;padding:6px">最近信号</th></tr></thead><tbody>';
+
+    subs.forEach(s => {
+      const allSigs = subSignals[s];
+      const gCount = allSigs.filter(x => x.type === 'golden').length;
+      const dCount = allSigs.filter(x => x.type === 'death').length;
+      const latestIdx2 = DATES.length - 1;
+      let latestVal2 = subData[s][latestIdx2];
+      if (latestVal2 == null) { for (let j = latestIdx2-1; j >= 0; j--) { if (subData[s][j] != null) { latestVal2 = subData[s][j]; break; } } }
+      const valStr2 = latestVal2 != null ? latestVal2 + '%' : 'N/A';
+      const lastSig = allSigs.length > 0 ? allSigs[allSigs.length-1] : null;
+      const lastSigStr = lastSig ? `${lastSig.date} <span style="color:${lastSig.type==='golden'?'#27ae60':'#e74c3c'}">${lastSig.type==='golden'?'↑金叉':'↓死叉'}</span>` : '<span style="color:#ccc">无</span>';
+      const hot = latestVal2 >= 50;
+      html += `<tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:5px 8px;font-weight:600">${s}</td>
+        <td style="text-align:center;color:${hot?'#2471a3':'#95a5a6'}">${valStr2}</td>
+        <td style="text-align:center;color:#27ae60;font-weight:600">${gCount}</td>
+        <td style="text-align:center;color:#e74c3c;font-weight:600">${dCount}</td>
+        <td style="text-align:center;font-size:11px">${lastSigStr}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+
+    document.getElementById("drillContent").innerHTML = html;
+  }
+
+  overlay.style.display = "block";
+  requestAnimationFrame(() => { overlay.classList.add("visible"); panel.classList.add("open"); });
+}
 
 // ===== 刷新数据（打开在线版） =====
 document.getElementById("btnRefresh").addEventListener("click", function() {
