@@ -205,6 +205,16 @@
 
   .footer { text-align: center; margin-top: 16px; padding: 8px 0; font-size: 11px; color: #bdc3c7; }
 
+  /* 刷新按钮 */
+  .refresh-btn {
+    background: #e8f5e9 !important; color: #2e7d32 !important; border-color: #a5d6a7 !important;
+    font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .refresh-btn:hover { background: #c8e6c9 !important; }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .refresh-btn.loading { animation: spin-icon 1s linear infinite; }
+  @keyframes spin-icon { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
   /* ===== 移动端适配 ===== */
   @media (max-width: 768px) {
     body { padding: 10px; }
@@ -223,6 +233,7 @@
     .toolbar > span[style*="flex:1"] { display: none; }
     .toolbar-label { margin-bottom: -4px; }
     .toolbar-btn { padding: 8px 12px; font-size: 12px; text-align: center; }
+    .refresh-btn { width: 100%; justify-content: center; padding: 10px !important; }
 
     /* 热力图：更小的格子 */
     .heatmap-table { min-width: 600px; }
@@ -291,6 +302,8 @@
     <span class="toolbar-label">显示：</span>
     <button class="toolbar-btn" data-toggle="momentum" id="btnMomentum">动量列</button>
     <button class="toolbar-btn" data-toggle="signals" id="btnSignals">轮动信号</button>
+    <span style="flex:1"></span>
+    <button class="toolbar-btn refresh-btn" id="btnRefresh" title="触发GitHub Actions更新数据">⟳ 刷新数据</button>
   </div>
 
   <!-- 热力图 -->
@@ -745,6 +758,22 @@ if ('ontouchstart' in window) {
     }
   });
 }
+
+// ===== 手动刷新数据 =====
+(function() {
+  const btn = document.getElementById('btnRefresh');
+  if (!btn) return;
+
+  btn.addEventListener('click', function() {
+    window.open('https://github.com/killuahong-hub/a-share-heatmap/actions/workflows/deploy.yml', '_blank');
+    btn.textContent = '✓ 请在GitHub点击 Run workflow';
+    btn.style.background = '#c8e6c9';
+    setTimeout(() => {
+      btn.textContent = '⟳ 刷新数据';
+      btn.style.background = '';
+    }, 5000);
+  });
+})();
 </script>
 </body>
 </html>
