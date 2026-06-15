@@ -60,10 +60,8 @@ INDUSTRY_CATEGORY_MAP = {
 
 def fetch_data():
     print(f"[{datetime.now(BJ_TZ).strftime('%H:%M:%S')}] 正在获取数据（{PAGES}页）...")
-    all_dates = []
-    all_data = []
     industries = None
-    date_offset = 0
+    page_results = []
 
     for page in range(PAGES):
         url = f"{API_BASE}?page={page}"
@@ -80,15 +78,27 @@ def fetch_data():
         if industries is None:
             industries = raw["industries"]
 
-        page_dates = raw["dates"]
+        page_results.append(raw)
+        print(f"  Page {page}: {len(raw['dates'])} 天 ({raw['dates'][0]} ~ {raw['dates'][-1]})")
+
+    # 按日期排序合并（老→新）
+    all_entries = []
+    for raw in page_results:
         for date_idx, ind_idx, val in raw["data"]:
-            all_data.append([date_idx + date_offset, ind_idx, val])
+            all_entries.append((raw["dates"][date_idx], raw["industries"][ind_idx], val))
 
-        all_dates.extend(page_dates)
-        date_offset += len(page_dates)
-        print(f"  Page {page}: {len(page_dates)} 天 ({page_dates[0]} ~ {page_dates[-1]})")
+    all_entries.sort(key=lambda x: x[0])
 
-    return {"dates": all_dates, "industries": industries, "data": all_data}
+    sorted_dates = sorted(set(e[0] for e in all_entries))
+    date_to_idx = {d: i for i, d in enumerate(sorted_dates)}
+    ind_to_idx = {ind: i for i, ind in enumerate(industries)}
+
+    merged_data = []
+    for date_str, ind_name, val in all_entries:
+        merged_data.append([date_to_idx[date_str], ind_to_idx[ind_name], val])
+
+    print(f"  合并完成: {len(industries)} 个行业, {len(sorted_dates)} 个交易日 ({sorted_dates[0]} ~ {sorted_dates[-1]})")
+    return {"dates": sorted_dates, "industries": industries, "data": merged_data}
 
 
 def aggregate_data(raw):
