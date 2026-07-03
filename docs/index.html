@@ -28,6 +28,26 @@
   }
   .card h2 .hint { font-size: 11px; color: #95a5a6; font-weight: 400; }
 
+  /* 市场温度 */
+  .market-temp {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    margin: -6px 0 18px; padding: 10px 20px; background: #fff; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .temp-label { font-size: 13px; font-weight: 600; color: #4a6785; }
+  .temp-badge {
+    padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .temp-badge.frozen { background: #e8eaf6; color: #3949ab; }
+  .temp-badge.cold   { background: #e3f2fd; color: #1565c0; }
+  .temp-badge.warm   { background: #fff3e0; color: #e65100; }
+  .temp-badge.hot    { background: #fce4ec; color: #c62828; }
+  .temp-badge.boiling{ background: #ffebee; color: #b71c1c; }
+  .temp-stat { font-size: 12px; color: #7f8c8d; }
+  .temp-stat strong { color: #2c3e50; font-weight: 600; }
+  .temp-bar-bg { width: 120px; height: 6px; background: #eef3f9; border-radius: 3px; overflow: hidden; }
+  .temp-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
   /* 统计卡片 */
   .stats { display: flex; justify-content: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
   .stat-item {
@@ -375,9 +395,9 @@
     <span class="toolbar-label">时间：</span>
     <button class="toolbar-btn" data-range="7">近7日</button>
     <button class="toolbar-btn" data-range="14">近14日</button>
-    <button class="toolbar-btn" data-range="30">近30日</button>
+    <button class="toolbar-btn active" data-range="30">近30日</button>
     <button class="toolbar-btn" data-range="60">近60日</button>
-    <button class="toolbar-btn active" data-range="999">全周期</button>
+    <button class="toolbar-btn" data-range="999">全周期</button>
     <span style="flex:1"></span>
     <span class="toolbar-label">显示：</span>
     <button class="toolbar-btn" data-toggle="momentum" id="btnMomentum">动量列</button>
@@ -422,7 +442,7 @@
 
   <!-- 趋势折线图 -->
   <div class="card">
-    <h2>趋势对比折线图 <span class="hint">虚线为市场均线（26行业平均）</span></h2>
+    <h2>趋势对比折线图 <span class="hint">虚线为市场均线（23行业平均）</span></h2>
     <div class="chart-presets" id="chartPresets"></div>
     <div class="chart-controls" id="chartControls"></div>
     <div class="chart-container"><canvas id="trendChart"></canvas></div>
@@ -430,7 +450,7 @@
 
   <!-- 映射表 -->
   <div class="card">
-    <h2>行业分类映射（86 → 26）</h2>
+    <h2>行业分类映射（86 → 23）</h2>
     <div style="overflow-x:auto;"><table class="mapping-table" id="mappingTable"></table></div>
   </div>
 
@@ -525,6 +545,29 @@ document.getElementById("stats").innerHTML = [
   { label:"近5日最强", value: ranked.reduce((a,b)=>(a.momentum||0)>(b.momentum||0)?a:b).cat, desc: "+" + ranked.reduce((a,b)=>(a.momentum||0)>(b.momentum||0)?a:b).momentum },
   { label:"近5日最弱", value: ranked.reduce((a,b)=>(a.momentum||0)<(b.momentum||0)?a:b).cat, desc: ranked.reduce((a,b)=>(a.momentum||0)<(b.momentum||0)?a:b).momentum },
 ].map(s=>`<div class="stat-item"><div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div><div class="stat-desc">${s.desc}</div></div>`).join("");
+
+// ===== 市场温度 =====
+(function() {
+  const avgNum = parseFloat(avg);
+  let level, cls, emoji;
+  if (avgNum >= 80) { level = "极热"; cls = "boiling"; emoji = "🔥"; }
+  else if (avgNum >= 60) { level = "偏热"; cls = "hot"; emoji = "🟠"; }
+  else if (avgNum >= 40) { level = "中性"; cls = "warm"; emoji = "🟡"; }
+  else if (avgNum >= 25) { level = "偏冷"; cls = "cold"; emoji = "🔵"; }
+  else { level = "冰点"; cls = "frozen"; emoji = "🧊"; }
+  const barColor = avgNum >= 60 ? "#e74c3c" : avgNum >= 40 ? "#f39c12" : avgNum >= 25 ? "#3498db" : "#5c6bc0";
+  const topCat = ranked[0], botCat = ranked[ranked.length-1];
+  const momTop = ranked.reduce((a,b)=>(a.momentum||0)>(b.momentum||0)?a:b);
+  document.getElementById("marketTemp").innerHTML = `
+    <span class="temp-label">市场温度</span>
+    <span class="temp-badge ${cls}">${emoji} ${level}</span>
+    <span class="temp-stat">均值 <strong>${avg}%</strong></span>
+    <div class="temp-bar-bg"><div class="temp-bar-fill" style="width:${Math.min(avgNum,100)}%;background:${barColor}"></div></div>
+    <span class="temp-stat">${above50}/${allLatest.length} 站上50%</span>
+    <span class="temp-stat">最强 <strong>${topCat.cat}</strong>(${topCat.latest}%)</span>
+    <span class="temp-stat">动量王 <strong>${momTop.cat}</strong>(+${momTop.momentum||0})</span>
+  `;
+})();
 
 // ===== 工具栏 =====
 document.querySelectorAll("[data-color]").forEach(btn => {
